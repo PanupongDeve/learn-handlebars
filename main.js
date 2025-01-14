@@ -1,5 +1,5 @@
 
-const {  processWriteFilesInDirectory } = require('./libs/read-templates.js');
+const {  processWriteFilesInDirectory } = require('./libs/templates.js');
 
 
 
