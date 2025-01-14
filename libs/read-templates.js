@@ -1,7 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const Handlebars = require("handlebars");
 const fs_promises = fs.promises
 
+function assignValues(data, secretData) {
+  const template = Handlebars.compile(data);
+  const output = template(secretData)
+  return output;
+}
 
 async function readTemplate(filePath) {
   try {
@@ -12,9 +18,19 @@ async function readTemplate(filePath) {
   }
 }
 
-async function writeOutput(filePath, data) {
+async function readSecret(filePath) {
+  try {
+    const data = await fs_promises.readFile(filePath, 'utf8');
+    return data;
+  } catch (err) {
+      console.error('Error Reading Template:', err);
+  }
+}
+
+async function writeOutput(filePath, filename, data) {
   try {
     // Create the directory if it doesn't exist
+    console.log('filename:', filename);
     fs_promises.mkdir(path.dirname(filePath), { recursive: true });
     await fs_promises.writeFile(filePath, data, 'utf8');
   } catch (err) {
@@ -23,19 +39,24 @@ async function writeOutput(filePath, data) {
 }
 
 
-async function processWriteFilesInDirectory(srcDirectory, destDirectory) {
+async function processWriteFilesInDirectory({srcDirectory, destDirectory, secretDirectory}) {
   try {
     const entries = await fs_promises.readdir(srcDirectory, { withFileTypes: true });
     entries.forEach(async (entry) => {
       const fullPathRead = `${srcDirectory}/${entry.name}`;
+      const fullsecretPathRead = `${secretDirectory}/${entry.name}`;
       const fullPathWrite = `${destDirectory}/${entry.name}`;
       if (entry.isFile()) {
-        console.log('File:', fullPathRead);
-        await processWriteFile(srcDirectory, destDirectory, entry.name);
+        // console.log('File:', fullPathRead);
+        await processWriteFile({srcDirectory, destDirectory, secretDirectory, filename: entry.name});
       } else if (entry.isDirectory()) {
-        console.log('DirectoryRead:', fullPathRead);
-        console.log('DirectoryWrite:', fullPathWrite);
-        await processWriteFilesInDirectory(fullPathRead, fullPathWrite);
+        // console.log('DirectoryRead:', fullPathRead);
+        // console.log('DirectoryWrite:', fullPathWrite);
+        await processWriteFilesInDirectory({
+          srcDirectory: fullPathRead, 
+          destDirectory: fullPathWrite, 
+          secretDirectory: fullsecretPathRead
+        });
       }
     });
   } catch (error) {
@@ -43,9 +64,12 @@ async function processWriteFilesInDirectory(srcDirectory, destDirectory) {
   }
 }
 
-async function processWriteFile(srcDirectory, destDirectory, filename) {
+async function processWriteFile({srcDirectory, destDirectory, secretDirectory, filename}) {
   const data = await readTemplate(`${srcDirectory}/${filename}`);
-  await writeOutput(`${destDirectory}/${filename}`, data);
+  const secretFilename = filename.split('.yml')[0] + '.json';
+  console.log('secretFilename:', secretFilename);
+  const secretData = JSON.parse(await readSecret(`${secretDirectory}/${secretFilename}`));
+  await writeOutput(`${destDirectory}/${filename}`, filename, assignValues(data, secretData));
   
 }
 

@@ -11,8 +11,8 @@ metadata:
   name: node-app-config
   namespace: node-app
 data:
-  NODE_ENV: {{NODE_ENV}}
-  LOG_LEVEL: {{LOG_LEVEL}}
+  NODE_ENV: production-react-test2
+  LOG_LEVEL: error
 ---
 # Deployment for Development Environment
 apiVersion: apps/v1
